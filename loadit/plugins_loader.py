@@ -95,10 +95,10 @@ class PluginsLoader(BaseModel):
         package_path = package.__path__[0]
         return self._generate_directory_relative_path(package_path)
 
-    def _generate_subdirectories_trees(self,
-                                       package_directory: FileSystemPath,
+    def _generate_subdirectories_trees(self, package_directory: FileSystemPath,
                                        package_subdirectories: List[FileSystemPath]) -> \
             Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
+
         subdirectories_trees = None
         package_subdirectories = [
             x
@@ -131,14 +131,16 @@ class PluginsLoader(BaseModel):
         'test.my_abstract'
         :param package_file_relative_path: the relative path to the package file
         """
-        result = package_file_relative_path.with_suffix("")  # remove suffix
-        result = result.as_posix()  # convert to posix
-        result = result.replace("/", ".")  # replace / (used for directory hierarchy in posix path) with .
-        result = result.lstrip(".")  # remove . prefix (if exists)
+        package_path: Path = package_file_relative_path.with_suffix("")  # remove suffix
+        package_posix_path: FileSystemPath = package_path.as_posix()  # convert to posix
 
-        # remove prefix path containing 'site-packages' directory (for example, useful for virtual environments)
-        result = result.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
-        return result
+        # replace / (used for directory hierarchy in posix path) with . and remove . prefix (if exists)
+        package_import_path: PackagePath = package_posix_path.replace("/", ".").lstrip(".")
+
+        # remove prefix path containing `_INSTALLED_PACKAGES_DIRECTORY` directory
+        # (for example, useful for virtual environments)
+        package_import_path = package_import_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
+        return package_import_path
 
     def _generate_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> \
             List[Type[T]]:
