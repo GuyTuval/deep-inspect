@@ -99,7 +99,7 @@ class PluginsLoader(BaseModel):
                                        package_subdirectories: List[FileSystemPath]) -> \
             Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
 
-        subdirectories_trees = None
+        subdirectories_trees = chain.from_iterable([])
         package_subdirectories = [
             x
             for x in package_subdirectories
@@ -110,10 +110,7 @@ class PluginsLoader(BaseModel):
             package_subdirectory_full_path = Path(package_directory) / package_subdirectory
             package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
             subdirectory_tree = os.walk(package_subdirectory_relative_path)
-            if subdirectories_trees:
-                subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
-            else:
-                subdirectories_trees = subdirectory_tree
+            subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
         return subdirectories_trees
 
     # TODO: Can go out to path_utils
