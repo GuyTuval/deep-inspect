@@ -14,6 +14,9 @@ __all__ = ["PluginsLoader"]
 _logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+FileSystemPath = 'str'
+PackagePath = 'str'  # TODO: Fix
+# PackagePath = Field(str, regex=r"([a-z]*_?[a-z]*(\.([a-z]*_?[a-z])*)?)+")
 
 _PRIVATE_PREFIX: Final = "__"
 _INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
@@ -38,54 +41,40 @@ class PluginsLoader(BaseModel):
         assert plugins_predicate, f"field can't be None"
         return plugins_predicate
 
-    # @validator('plugins_packages')
-    # def validate_packages_parameters(cls, plugins_packages: Union[ModuleType, Set[ModuleType]]) -> Set[ModuleType]:
-    #     if not isinstance(plugins_packages, set):
-    #         plugins_packages = {plugins_packages}
-    #
-    #     for parameter in plugins_packages:
-    #         assert inspect.ismodule(parameter), f"{parameter} is not a python package"
-    #
-    #         # if (
-    #         #     not hasattr(plugins_package, "__package__")
-    #         #     or plugins_package.__package__ != plugins_package.__name__
-    #         # ):
-    #         #     raise TypeError(f"Parameter {plugins_package} is not a python package")
-    #
-    #     return plugins_packages
-
-    def load_subclasses(self, ancestor_class: Type[T]) -> Set[Type[T]]:
+    def load_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
         return self._load(lambda member: _is_subclass_predicate(member, ancestor_class))
 
-    def load(self) -> Set[Type[T]]:
+    def load(self) -> List[Type[T]]:
         return self._load(self.plugins_predicate)
 
-    def _load(self, plugins_predicate: Callable[..., bool]) -> Set[Type[T]]:
-        packages_paths = set()
+    def _load(self, plugins_predicate: Callable[..., bool]) -> List[Type[T]]:
+        packages_paths: Set[PackagePath] = set()
         for plugins_package in self.plugins_packages:
             packages_paths |= self._generate_packages_paths(plugins_package)
 
         plugins = self._generate_plugins(packages_paths, plugins_predicate)
         return plugins
 
-    def _generate_packages_paths(self, package: ModuleType) -> Set[str]:
+    def _generate_packages_paths(self, package: ModuleType) -> Set[PackagePath]:
         """
         Generates paths of all packages in the given package
         For example, if given package 'plugins' the returned list will look something like
          ['plugins.plugin1', 'plugins.plugin2']
         """
-        packages_import_paths: Set[str] = set()
+        packages_import_paths: Set[PackagePath] = set()
         excluded_prefixes = (_PRIVATE_PREFIX, ".")  # exclude inner directories
 
-        package_relative_path = self._generate_package_relative_filesystem_path(package)
-        directory_tree: Iterator[Tuple[str, List[str], List[str]]] = os.walk(package_relative_path)
+        package_relative_path = self._generate_package_relative_path(package)
+        directory_tree = os.walk(package_relative_path)
         for package_directory, package_subdirectories, files in directory_tree:
             if package_directory.endswith(excluded_prefixes):
                 continue
             packages_files = [
                 f
                 for f in files
-                if Path(f).suffix == ".py" and not Path(f).stem.startswith(_PRIVATE_PREFIX) and re.match(self.included_files_pattern, f)
+                if Path(f).suffix == ".py"
+                and not Path(f).stem.startswith(_PRIVATE_PREFIX)
+                and re.match(self.included_files_pattern, f)
             ]  # remove private files
 
             for package_file in packages_files:
@@ -99,22 +88,27 @@ class PluginsLoader(BaseModel):
 
         return packages_import_paths
 
-    def _generate_package_relative_filesystem_path(self, package: ModuleType) -> str:
+    def _generate_package_relative_path(self, package: ModuleType) -> FileSystemPath:
         """
         Generates package's relative path (in relate to the current working directory)
         """
         package_path = package.__path__[0]
-        return self._generate_directory_relative_filesystem_path(package_path)
+        return self._generate_directory_relative_path(package_path)
 
-    def _generate_subdirectories_trees(self, package_directory: str, package_subdirectories: List[str]) ->\
-            Iterator[Tuple[str, List[str], List[str]]]:
+    def _generate_subdirectories_trees(self,
+                                       package_directory: FileSystemPath,
+                                       package_subdirectories: List[FileSystemPath]) -> \
+            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
         subdirectories_trees = None
         package_subdirectories = [
-            x for x in package_subdirectories if not x.startswith(_PRIVATE_PREFIX) and re.match(self.included_directories_pattern, x)
+            x
+            for x in package_subdirectories
+            if not x.startswith(_PRIVATE_PREFIX)
+            and re.match(self.included_directories_pattern, x)
         ]
         for package_subdirectory in package_subdirectories:
             package_subdirectory_full_path = Path(package_directory) / package_subdirectory
-            package_subdirectory_relative_path = self._generate_directory_relative_filesystem_path(package_subdirectory_full_path)
+            package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
             subdirectory_tree = os.walk(package_subdirectory_relative_path)
             if subdirectories_trees:
                 subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
@@ -124,16 +118,17 @@ class PluginsLoader(BaseModel):
 
     # TODO: Can go out to path_utils
     @staticmethod
-    def _generate_directory_relative_filesystem_path(directory: Union[Path, str]) -> str:
+    def _generate_directory_relative_path(directory: Union[Path, FileSystemPath]) -> FileSystemPath:
         current_working_directory = Path.cwd()
         package_relative_path = os.path.relpath(directory, current_working_directory)
         return package_relative_path
 
     @staticmethod
-    def _generate_package_import_path(package_file_relative_path: Path) -> str:
+    def _generate_package_import_path(package_file_relative_path: Path) -> PackagePath:
         """
         Generates a package import path that can be imported given a package file relative path.
-        For example, if package_file_relative_path is '../test/my_abstract.py' the return value will be 'test.my_abstract'
+        For example, if package_file_relative_path is '../test/my_abstract.py' the return value will be
+        'test.my_abstract'
         :param package_file_relative_path: the relative path to the package file
         """
         result = package_file_relative_path.with_suffix("")  # remove suffix
@@ -145,24 +140,26 @@ class PluginsLoader(BaseModel):
         result = result.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
         return result
 
-    def _generate_plugins(self, packages_paths: Set[str], plugins_predicate: Callable[..., bool]) -> \
-            Set[Type[T]]:
+    def _generate_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> \
+            List[Type[T]]:
         """
         Get all plugins located in `packages_paths` that satisfy the `plugins_predicate`
         """
-        plugins_classes: Set[Type[T]] = set()  # define the set of plugins
+        plugins: List[Type[T]] = []  # define the set of plugins
 
-        missing_modules = set()
+        missing_modules = []
         for plugin_file_name in packages_paths:  # import each plugin's module
             try:
                 plugin_module = importlib.import_module(plugin_file_name)
             except ModuleNotFoundError as e:
-                missing_modules.add(e.name)
+                if e.name not in missing_modules:
+                    missing_modules.append(e.name)
                 continue
             members = inspect.getmembers(plugin_module, plugins_predicate)
-            plugins_class: Type[T]
-            for _, plugin_class in members:
-                plugins_classes.add(plugin_class)
+            plugins: Type[T]
+            for _, plugin in members:
+                if plugin not in plugins:
+                    plugins.append(plugin)
 
         if missing_modules:
             missing_modules_separated_by_comma = ", ".join(missing_modules)
@@ -175,7 +172,7 @@ class PluginsLoader(BaseModel):
                 raise ModuleNotFoundError(warning_message)
             _logger.warning(warning_message)
 
-        return plugins_classes
+        return plugins
 
 
 def _is_subclass_predicate(member: Any, ancestor_class: Type[T]) -> bool:
