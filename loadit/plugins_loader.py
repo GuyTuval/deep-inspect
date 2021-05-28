@@ -2,16 +2,21 @@ import importlib
 import inspect
 import logging
 import os
+import re
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable, Set, Type, TypeVar, Union
+from typing import Any, Callable, Final, Iterator, List, Pattern, Set, Tuple, Type, TypeVar, Union
 
 from pydantic import BaseModel, validator
 
 __all__ = ["PluginsLoader"]
 _logger = logging.getLogger(__name__)
+
 T = TypeVar("T")
+
+_PRIVATE_PREFIX: Final = "__"
+_INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
 
 
 class PluginsLoader(BaseModel):
@@ -20,44 +25,48 @@ class PluginsLoader(BaseModel):
 
     plugins_packages: Union[ModuleType, Set[ModuleType]]
     raise_exception_on_missing_modules: bool = False
-    full_depth_search: bool = True
-    excluded_files_regex: str = ""
-    excluded_directories_regex: str = ""
-    excluded_packages: Set[ModuleType] = set()
+    full_depth_search: bool = True  # TODO: Consider if needed? and CHECK
+    included_files_pattern: Pattern[str] = re.compile(r".*")
+    included_directories_pattern: Pattern[str] = re.compile(r".*")  # TODO: Consider if needed?
+    ############## ADD USAGE OF FOLLOWING ATTRIBUTES#####
+    included_subpackages: Set[ModuleType] = set()  # TODO: Consider if needed?
+    #####################################################
     plugins_predicate: Callable[..., bool] = None
 
     @validator('plugins_predicate')
-    def prevent_plugins_predicate_none(cls, plugins_predicate) -> None:
-        assert plugins_predicate, f"filed can't be None"
+    def prevent_plugins_predicate_none(cls, plugins_predicate: Callable[..., bool]) -> Callable[..., bool]:
+        assert plugins_predicate, f"field can't be None"
         return plugins_predicate
 
-    def load_subclasses(self, ancestor_class: Type[T]) -> Set[Type[T]]:
-        """
+    # @validator('plugins_packages')
+    # def validate_packages_parameters(cls, plugins_packages: Union[ModuleType, Set[ModuleType]]) -> Set[ModuleType]:
+    #     if not isinstance(plugins_packages, set):
+    #         plugins_packages = {plugins_packages}
+    #
+    #     for parameter in plugins_packages:
+    #         assert inspect.ismodule(parameter), f"{parameter} is not a python package"
+    #
+    #         # if (
+    #         #     not hasattr(plugins_package, "__package__")
+    #         #     or plugins_package.__package__ != plugins_package.__name__
+    #         # ):
+    #         #     raise TypeError(f"Parameter {plugins_package} is not a python package")
+    #
+    #     return plugins_packages
 
-        :rtype: object
-        """
+    def load_subclasses(self, ancestor_class: Type[T]) -> Set[Type[T]]:
         return self._load(lambda member: _is_subclass_predicate(member, ancestor_class))
 
     def load(self) -> Set[Type[T]]:
         return self._load(self.plugins_predicate)
 
     def _load(self, plugins_predicate: Callable[..., bool]) -> Set[Type[T]]:
-        if not isinstance(self.plugins_packages, set):
-            self.plugins_packages = {self.plugins_packages}
-
         packages_paths = set()
         for plugins_package in self.plugins_packages:
-            if (
-                not hasattr(plugins_package, "__package__")
-                or plugins_package.__package__ != plugins_package.__name__
-            ):
-                raise TypeError(f"Parameter {plugins_package} is not a python package")
             packages_paths |= self._generate_packages_paths(plugins_package)
 
-        plugins_classes = self._generate_plugins_classes(
-            packages_paths, plugins_predicate
-        )
-        return plugins_classes
+        plugins = self._generate_plugins(packages_paths, plugins_predicate)
+        return plugins
 
     def _generate_packages_paths(self, package: ModuleType) -> Set[str]:
         """
@@ -65,43 +74,57 @@ class PluginsLoader(BaseModel):
         For example, if given package 'plugins' the returned list will look something like
          ['plugins.plugin1', 'plugins.plugin2']
         """
-        packages_paths: Set[str] = set()
-        excluded_prefixes = ("__", ".")  # exclude inner folders
+        packages_import_paths: Set[str] = set()
+        excluded_prefixes = (_PRIVATE_PREFIX, ".")  # exclude inner directories
 
-        package_relative_path = self._generate_package_relative_path(package)
-        walk = os.walk(package_relative_path)
-        for package_directory, package_subdirectories, files in walk:
+        package_relative_path = self._generate_package_relative_filesystem_path(package)
+        directory_tree: Iterator[Tuple[str, List[str], List[str]]] = os.walk(package_relative_path)
+        for package_directory, package_subdirectories, files in directory_tree:
             if package_directory.endswith(excluded_prefixes):
                 continue
             packages_files = [
-                f for f in files if Path(f).suffix == ".py" and not Path(f).stem.startswith("__")
+                f
+                for f in files
+                if Path(f).suffix == ".py" and not Path(f).stem.startswith(_PRIVATE_PREFIX) and re.match(self.included_files_pattern, f)
             ]  # remove private files
 
             for package_file in packages_files:
                 package_file_relative_path = Path(package_directory) / package_file
                 package_path = self._generate_package_import_path(package_file_relative_path)
-                packages_paths.add(package_path)
+                packages_import_paths.add(package_path)
 
-            package_subdirectories = [x for x in package_subdirectories if not x.startswith("__")]
-            for package_subdirectory in package_subdirectories:
-                package_subdirectory_full_path = Path(package_directory) / package_subdirectory
-                package_subdirectory_relative_path = (
-                    self._generate_directory_relative_path(package_subdirectory_full_path)
-                )
-                walk = chain(walk, os.walk(package_subdirectory_relative_path))
+            if self.full_depth_search:
+                subdirectories_trees = self._generate_subdirectories_trees(package_directory, package_subdirectories)
+                directory_tree = chain(directory_tree, subdirectories_trees)
 
-        return packages_paths
+        return packages_import_paths
 
-    def _generate_package_relative_path(self, package: ModuleType) -> str:
+    def _generate_package_relative_filesystem_path(self, package: ModuleType) -> str:
         """
         Generates package's relative path (in relate to the current working directory)
         """
         package_path = package.__path__[0]
-        return self._generate_directory_relative_path(package_path)
+        return self._generate_directory_relative_filesystem_path(package_path)
+
+    def _generate_subdirectories_trees(self, package_directory: str, package_subdirectories: List[str]) ->\
+            Iterator[Tuple[str, List[str], List[str]]]:
+        subdirectories_trees = None
+        package_subdirectories = [
+            x for x in package_subdirectories if not x.startswith(_PRIVATE_PREFIX) and re.match(self.included_directories_pattern, x)
+        ]
+        for package_subdirectory in package_subdirectories:
+            package_subdirectory_full_path = Path(package_directory) / package_subdirectory
+            package_subdirectory_relative_path = self._generate_directory_relative_filesystem_path(package_subdirectory_full_path)
+            subdirectory_tree = os.walk(package_subdirectory_relative_path)
+            if subdirectories_trees:
+                subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
+            else:
+                subdirectories_trees = subdirectory_tree
+        return subdirectories_trees
 
     # TODO: Can go out to path_utils
     @staticmethod
-    def _generate_directory_relative_path(directory: Union[Path, str]) -> str:
+    def _generate_directory_relative_filesystem_path(directory: Union[Path, str]) -> str:
         current_working_directory = Path.cwd()
         package_relative_path = os.path.relpath(directory, current_working_directory)
         return package_relative_path
@@ -119,16 +142,13 @@ class PluginsLoader(BaseModel):
         result = result.lstrip(".")  # remove . prefix (if exists)
 
         # remove prefix path containing 'site-packages' directory (for example, useful for virtual environments)
-        result = result.split("site-packages.")[-1]
+        result = result.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
         return result
 
-    @staticmethod
-    def _generate_plugins_classes(
-        packages_paths: Set[str], plugins_predicate: Callable[..., bool]
-    ) -> Set[Type[T]]:
+    def _generate_plugins(self, packages_paths: Set[str], plugins_predicate: Callable[..., bool]) -> \
+            Set[Type[T]]:
         """
-        Generates a list of plugins using all classes that exist in packages_paths which implement the
-        plugins_abstract_class.
+        Get all plugins located in `packages_paths` that satisfy the `plugins_predicate`
         """
         plugins_classes: Set[Type[T]] = set()  # define the set of plugins
 
@@ -146,11 +166,14 @@ class PluginsLoader(BaseModel):
 
         if missing_modules:
             missing_modules_separated_by_comma = ", ".join(missing_modules)
-            _logger.warning(
+            warning_message = (
                 f"WARNING: Failed searching plugins in the following imported modules: "
                 f"{missing_modules_separated_by_comma}.{os.linesep}"
                 f"Consider running the following command: 'pip3 install {missing_modules_separated_by_comma}'."
             )
+            if self.raise_exception_on_missing_modules:
+                raise ModuleNotFoundError(warning_message)
+            _logger.warning(warning_message)
 
         return plugins_classes
 
