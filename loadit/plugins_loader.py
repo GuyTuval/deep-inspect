@@ -146,8 +146,8 @@ class PluginsLoader(BaseModel):
         Get all plugins located in `packages_paths` that satisfy the `plugins_predicate`
         """
         plugins: List[Type[T]] = []  # define the set of plugins
+        missing_modules: List[str] = []
 
-        missing_modules = []
         for plugin_file_name in packages_paths:  # import each plugin's module
             try:
                 plugin_module = importlib.import_module(plugin_file_name)
@@ -162,17 +162,20 @@ class PluginsLoader(BaseModel):
                     plugins.append(plugin)
 
         if missing_modules:
-            missing_modules_separated_by_comma = ", ".join(missing_modules)
-            warning_message = (
-                f"WARNING: Failed searching plugins in the following imported modules: "
-                f"{missing_modules_separated_by_comma}.{os.linesep}"
-                f"Consider running the following command: 'pip3 install {missing_modules_separated_by_comma}'."
-            )
-            if self.raise_exception_on_missing_modules:
-                raise ModuleNotFoundError(warning_message)
-            _logger.warning(warning_message)
+            self._handle_missing_modules(missing_modules)
 
         return plugins
+
+    def _handle_missing_modules(self, missing_modules: List[str]) -> None:
+        missing_modules_separated_by_comma = ", ".join(missing_modules)
+        warning_message = (
+            f"WARNING: Failed searching plugins in the following imported modules: "
+            f"{missing_modules_separated_by_comma}.{os.linesep}"
+            f"Consider running the following command: 'pip3 install {missing_modules_separated_by_comma}'."
+        )
+        if self.raise_exception_on_missing_modules:
+            raise ModuleNotFoundError(warning_message)
+        _logger.warning(warning_message)
 
 
 def _is_subclass_predicate(member: Any, ancestor_class: Type[T]) -> bool:
