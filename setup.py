@@ -6,7 +6,7 @@ import setuptools
 def get_version(path: str) -> str:
     with open(path) as f:
         content = f.read()
-        version_match = re.search('".*"', content)
+        version_match = re.search(r'".*"', content)
         if version_match:
             version = version_match.group()[1:-1]
             return version
