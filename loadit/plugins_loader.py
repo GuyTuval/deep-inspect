@@ -79,7 +79,7 @@ class PluginsLoader(BaseModel):
 
             for package_file in packages_files:
                 package_file_relative_path = Path(package_directory) / package_file
-                package_path = self._generate_package_import_path(package_file_relative_path)
+                package_path = self._generate_package_path(package_file_relative_path)
                 packages_import_paths.add(package_path)
 
             if self.full_depth_search:
@@ -121,7 +121,7 @@ class PluginsLoader(BaseModel):
         return package_relative_path
 
     @staticmethod
-    def _generate_package_import_path(package_file_relative_path: Path) -> PackagePath:
+    def _generate_package_path(package_file_relative_path: Path) -> PackagePath:
         """
         Generates a package import path that can be imported given a package file relative path.
         For example, if package_file_relative_path is '../test/my_abstract.py' the return value will be
