@@ -83,16 +83,10 @@ class PluginsLoader(BaseModel):
 
         package_relative_path = self._generate_package_relative_path(package)
         directory_tree = os.walk(package_relative_path)
-        for package_directory, package_subdirectories, files in directory_tree:
+        for package_directory, package_subdirectories, package_files in directory_tree:
             if package_directory.endswith(excluded_prefixes):
                 continue
-            packages_files = [
-                f
-                for f in files
-                if Path(f).suffix == ".py"
-                   and not Path(f).stem.startswith(_PRIVATE_PREFIX)
-                   and re.match(self.included_files_pattern, f)
-            ]  # remove private files
+            packages_files = [f for f in package_files if self._is_acceptable_package_file(f)]  # remove private files
 
             for package_file in packages_files:
                 package_file_relative_path = Path(package_directory) / package_file
@@ -112,16 +106,24 @@ class PluginsLoader(BaseModel):
         package_path = package.__path__[0]
         return self._generate_directory_relative_path(package_path)
 
+    def _is_acceptable_package_file(self, package_file: FileSystemPath) -> bool:
+        """
+        Checks if ``package_file`` is one which we want to look at
+        """
+        package_file_path = Path(package_file)
+        return (
+                package_file_path.suffix == ".py"
+                and not package_file_path.stem.startswith(_PRIVATE_PREFIX)
+                and re.match(self.included_files_pattern, package_file)
+        )
+
     def _generate_subdirectories_trees(self, package_directory: FileSystemPath,
                                        package_subdirectories: List[FileSystemPath]) -> \
             Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
 
         subdirectories_trees = chain.from_iterable([])
         package_subdirectories = [
-            x
-            for x in package_subdirectories
-            if not x.startswith(_PRIVATE_PREFIX)
-               and re.match(self.included_subdirectories_pattern, x)
+            directory for directory in package_subdirectories if self._is_acceptable_package_subdirectory(directory)
         ]
         for package_subdirectory in package_subdirectories:
             package_subdirectory_full_path = Path(package_directory) / package_subdirectory
@@ -129,6 +131,15 @@ class PluginsLoader(BaseModel):
             subdirectory_tree = os.walk(package_subdirectory_relative_path)
             subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
         return subdirectories_trees
+
+    def _is_acceptable_package_subdirectory(self, package_subdirectory: FileSystemPath) -> bool:
+        """
+        Checks if ``package_subdirectory`` is one which we want to look at
+        """
+        return (
+                not package_subdirectory.startswith(_PRIVATE_PREFIX)
+                and re.match(self.included_subdirectories_pattern, package_subdirectory)
+        )
 
     # TODO: Can go out to path_utils
     @staticmethod
@@ -207,7 +218,7 @@ class PluginsLoader(BaseModel):
 
 def _is_member_subclass_of_ancestor_predicate(member: Any, ancestor_class: Type[T]) -> bool:
     return (
-        inspect.isclass(member) and
-        member != ancestor_class and
-        issubclass(member, ancestor_class)
+            inspect.isclass(member) and
+            member != ancestor_class and
+            issubclass(member, ancestor_class)
     )
