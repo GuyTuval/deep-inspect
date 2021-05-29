@@ -6,7 +6,8 @@ import re
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable, Final, Iterator, List, Pattern, Set, Tuple, Type, TypeVar, Union
+from typing import (Any, Callable, Final, Iterator, List, Pattern, Set, Tuple,
+                    Type, TypeVar, Union)
 
 from pydantic import BaseModel, validator
 
@@ -23,6 +24,13 @@ _INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
 
 
 class PluginsLoader(BaseModel):
+    """
+    A class used for loading plugins dynamically.
+
+    :param plugins_packages A single package or a ``Set`` of packages that will be used to search for plugins in
+
+    """
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -82,8 +90,8 @@ class PluginsLoader(BaseModel):
                 f
                 for f in files
                 if Path(f).suffix == ".py"
-                and not Path(f).stem.startswith(_PRIVATE_PREFIX)
-                and re.match(self.included_files_pattern, f)
+                   and not Path(f).stem.startswith(_PRIVATE_PREFIX)
+                   and re.match(self.included_files_pattern, f)
             ]  # remove private files
 
             for package_file in packages_files:
@@ -113,7 +121,7 @@ class PluginsLoader(BaseModel):
             x
             for x in package_subdirectories
             if not x.startswith(_PRIVATE_PREFIX)
-            and re.match(self.included_subdirectories_pattern, x)
+               and re.match(self.included_subdirectories_pattern, x)
         ]
         for package_subdirectory in package_subdirectories:
             package_subdirectory_full_path = Path(package_directory) / package_subdirectory
