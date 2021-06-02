@@ -57,12 +57,12 @@ class PluginsLoader(BaseModel):
         packages_paths: Set[PackagePath] = set()
         plugins_packages = self.plugins_packages if isinstance(self.plugins_packages, set) else {self.plugins_packages}
         for plugins_package in plugins_packages:
-            packages_paths |= self._generate_packages_paths(plugins_package)
+            packages_paths |= self._generate_packages_paths_from_module(plugins_package)
 
         plugins = self._load_plugins(packages_paths, plugins_predicate)
         return plugins
 
-    def _generate_packages_paths(self, package: ModuleType) -> Set[PackagePath]:
+    def _generate_packages_paths_from_module(self, package: ModuleType) -> Set[PackagePath]:
         """
         Generates ``PackagePath``-s of all packages in ``package``.
         For example, if ``package`` is 'plugins' the returned list will look something like
