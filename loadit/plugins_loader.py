@@ -99,7 +99,7 @@ class PluginsLoader(BaseModel):
         package_file_path = Path(package_file)
         return (
                 package_file_path.suffix == ".py"
-                and not package_file_path.stem.startswith(_PRIVATE_PREFIX)
+                and not package_file_path.name.startswith(_PRIVATE_PREFIX)
                 and re.match(self.included_files_pattern, package_file)
         )
 
