@@ -36,7 +36,7 @@ class PluginsLoader(BaseModel):
 
     plugins_packages: Union[ModuleType, Set[ModuleType]]
     raise_exception_on_missing_modules: bool = False
-    full_depth_search: bool = True  # TODO: Consider if needed? and CHECK
+    # full_depth_search: bool = True  # TODO: Consider if needed? and CHECK
     included_files_pattern: Pattern[str] = re.compile(r".*")
     included_subdirectories_pattern: Pattern[str] = re.compile(r".*")
     ############## ADD USAGE OF FOLLOWING ATTRIBUTES#####
@@ -78,14 +78,8 @@ class PluginsLoader(BaseModel):
                 continue
             packages_paths |= self._generate_packages_paths_from_files(package_directory, package_files)
 
-            for package_file in packages_files:
-                package_file_relative_path = Path(package_directory) / package_file
-                package_path = self._generate_package_path(package_file_relative_path)
-                packages_import_paths.add(package_path)
-
-            if self.full_depth_search:
-                subdirectories_trees = self._generate_subdirectories_trees(package_directory, package_subdirectories)
-                directory_tree = chain(directory_tree, subdirectories_trees)
+            subdirectories_trees = self._generate_subdirectories_trees(package_directory, package_subdirectories)
+            directory_tree = chain(directory_tree, subdirectories_trees)
 
         return packages_paths
 
