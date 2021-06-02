@@ -9,7 +9,7 @@ from types import ModuleType
 from typing import (Any, Callable, Final, Iterator, List, Optional, Pattern,
                     Set, Tuple, Type, TypeVar, Union)
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 __all__ = ["PluginsLoader"]
 _logger = logging.getLogger(__name__)
