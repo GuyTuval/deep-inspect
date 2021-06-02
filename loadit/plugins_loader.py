@@ -68,7 +68,7 @@ class PluginsLoader(BaseModel):
         For example, if ``package`` is 'plugins' the returned list will look something like
         ['plugins.plugin1', 'plugins.plugin2']
         """
-        packages_import_paths: Set[PackagePath] = set()
+        packages_paths: Set[PackagePath] = set()
         excluded_prefixes = (_PRIVATE_PREFIX, ".")  # exclude inner directories
 
         package_relative_path = self._generate_package_relative_path(package)
@@ -76,7 +76,7 @@ class PluginsLoader(BaseModel):
         for package_directory, package_subdirectories, package_files in directory_tree:
             if Path(package_directory).name.endswith(excluded_prefixes):
                 continue
-            packages_files = [f for f in package_files if self._is_acceptable_package_file(f)]  # remove private files
+            packages_paths |= self._generate_packages_paths_from_files(package_directory, package_files)
 
             for package_file in packages_files:
                 package_file_relative_path = Path(package_directory) / package_file
@@ -87,7 +87,7 @@ class PluginsLoader(BaseModel):
                 subdirectories_trees = self._generate_subdirectories_trees(package_directory, package_subdirectories)
                 directory_tree = chain(directory_tree, subdirectories_trees)
 
-        return packages_import_paths
+        return packages_paths
 
     def _generate_package_relative_path(self, package: ModuleType) -> FileSystemPath:
         """Generates a ``FileSystemPath`` of ``package``'s  relative to ``current_working_directory``"""
