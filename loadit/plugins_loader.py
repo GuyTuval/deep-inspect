@@ -42,12 +42,7 @@ class PluginsLoader(BaseModel):
     ############## ADD USAGE OF FOLLOWING ATTRIBUTES#####
     included_subpackages: Set[ModuleType] = set()  # TODO: Consider if needed?
     #####################################################
-    plugins_predicate: Optional[Callable[..., bool]] = None
-
-    @validator('plugins_predicate')
-    def prevent_plugins_predicate_none(cls, plugins_predicate: Callable[..., bool]) -> Callable[..., bool]:
-        assert plugins_predicate, f"field can't be None"
-        return plugins_predicate
+    plugins_predicate: Optional[Callable[..., bool]] = lambda member: False
 
     def load_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
         """Load all plugins in ``self.plugins_packages`` that are subclasses of ``ancestor_class``"""
