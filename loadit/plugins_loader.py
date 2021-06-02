@@ -167,10 +167,9 @@ class PluginsLoader(BaseModel):
         package_import_path = package_import_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
         return package_import_path
 
-    def _load_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> \
-            List[Type[T]]:
+    def _load_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> List[Type[T]]:
         """Load all plugins located in ``packages_paths`` that satisfy the ``plugins_predicate``"""
-        plugins: List[Type[T]] = []  # define the set of plugins
+        plugins: List[Type[T]] = []  # define the list of plugins
         missing_modules: List[str] = []
 
         for plugin_file_name in packages_paths:  # import each plugin's module
@@ -185,7 +184,7 @@ class PluginsLoader(BaseModel):
             members = inspect.getmembers(plugin_module, plugins_predicate)
             plugin: Type[T]
             for _, plugin in members:
-                if plugin not in plugins:
+                if plugin not in plugins:  # use this condition instead of set because T isn't necessarily hashable
                     plugins.append(plugin)
 
         if missing_modules:
