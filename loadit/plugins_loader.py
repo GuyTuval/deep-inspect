@@ -94,6 +94,20 @@ class PluginsLoader(BaseModel):
         package_path = package.__path__[0]
         return self._generate_directory_relative_path(package_path)
 
+    def _generate_packages_paths_from_files(self,
+                                            package_directory: FileSystemPath,
+                                            package_files: List[str]) -> Set[PackagePath]:
+        packages_paths: Set[PackagePath] = set()
+        packages_files_relative_paths = [
+            Path(package_directory) / f for f in package_files if self._is_acceptable_package_file(f)
+        ]  # remove private files
+
+        for package_file_relative_path in packages_files_relative_paths:
+            package_path = self._generate_package_path(package_file_relative_path)
+            packages_paths.add(package_path)
+
+        return packages_paths
+
     def _is_acceptable_package_file(self, package_file: FileSystemPath) -> bool:
         """Checks if ``package_file`` is one which we want to look at"""
         package_file_path = Path(package_file)
