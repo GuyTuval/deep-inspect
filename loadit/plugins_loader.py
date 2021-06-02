@@ -108,15 +108,21 @@ class PluginsLoader(BaseModel):
             Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
 
         subdirectories_trees = chain.from_iterable([])
-        package_subdirectories = [
-            directory for directory in package_subdirectories if self._is_acceptable_package_subdirectory(directory)
+        package_subdirectories_full_paths = [
+            Path(package_directory) / directory for directory in package_subdirectories
+            if self._is_acceptable_package_subdirectory(directory)
         ]
-        for package_subdirectory in package_subdirectories:
-            package_subdirectory_full_path = Path(package_directory) / package_subdirectory
-            package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
-            subdirectory_tree = os.walk(package_subdirectory_relative_path)
+        for package_subdirectory_full_path in package_subdirectories_full_paths:
+            subdirectory_tree = self._generate_subdirectory_tree(package_subdirectory_full_path)
             subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
         return subdirectories_trees
+
+    def _generate_subdirectory_tree(self, package_subdirectory_full_path: Path) -> \
+            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
+
+        package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
+        subdirectory_tree = os.walk(package_subdirectory_relative_path)
+        return subdirectory_tree
 
     def _is_acceptable_package_subdirectory(self, package_subdirectory: FileSystemPath) -> bool:
         """Checks if ``package_subdirectory`` is one which we want to look at"""
