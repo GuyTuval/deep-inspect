@@ -6,7 +6,7 @@ import re
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import (Any, Callable, Final, Iterator, List, Optional, Pattern,
+from typing import (Any, Callable, Final, Iterator, List, Pattern,
                     Set, Tuple, Type, TypeVar, Union)
 
 from pydantic import BaseModel
@@ -15,9 +15,8 @@ __all__ = ["PluginsLoader"]
 _logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
-FileSystemPath = 'str'
-PackagePath = 'str'  # TODO: Fix
-# PackagePath = Field(str, regex=r"([a-z]*_?[a-z]*(\.([a-z]*_?[a-z])*)?)+")
+FileSystemPath = Union[str, Path]
+PackagePath = Union[str, Path]  # string/Path that matches the pattern r"([a-z]*_?[a-z]*(\.([a-z]*_?[a-z])*)?)+"
 
 _PRIVATE_PREFIX: Final = "__"
 _INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
@@ -42,7 +41,7 @@ class PluginsLoader(BaseModel):
     ############## ADD USAGE OF FOLLOWING ATTRIBUTES#####
     included_subpackages: Set[ModuleType] = set()  # TODO: Consider if needed?
     #####################################################
-    plugins_predicate: Optional[Callable[..., bool]] = lambda member: False
+    plugins_predicate: Callable[..., bool] = lambda member: False
 
     def load_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
         """Load all plugins in ``self.plugins_packages`` that are subclasses of ``ancestor_class``"""
@@ -59,7 +58,7 @@ class PluginsLoader(BaseModel):
         for plugins_package in plugins_packages:
             packages_paths |= self._generate_packages_paths_from_module(plugins_package)
 
-        plugins = self._load_plugins(packages_paths, plugins_predicate)
+        plugins: List[Type[T]] = self._load_plugins(packages_paths, plugins_predicate)
         return plugins
 
     def _generate_packages_paths_from_module(self, package: ModuleType) -> Set[PackagePath]:
@@ -108,13 +107,14 @@ class PluginsLoader(BaseModel):
         return (
                 package_file_path.suffix == ".py"
                 and not package_file_path.name.startswith(_PRIVATE_PREFIX)
-                and re.match(self.included_files_pattern, package_file)
+                and re.match(self.included_files_pattern, package_file) is not None
         )
 
     def _generate_subdirectories_trees(self, package_directory: FileSystemPath,
                                        package_subdirectories: List[FileSystemPath]) -> \
             Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
 
+        subdirectories_trees: Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]
         subdirectories_trees = chain.from_iterable([])
         package_subdirectories_full_paths = [
             Path(package_directory) / directory for directory in package_subdirectories
@@ -136,7 +136,7 @@ class PluginsLoader(BaseModel):
         """Checks if ``package_subdirectory`` is one which we want to look at"""
         return (
                 not package_subdirectory.startswith(_PRIVATE_PREFIX)
-                and re.match(self.included_subdirectories_pattern, package_subdirectory)
+                and re.match(self.included_subdirectories_pattern, package_subdirectory) is not None
         )
 
     # TODO: Can go out to path_utils
@@ -160,12 +160,12 @@ class PluginsLoader(BaseModel):
         package_posix_path: FileSystemPath = package_path.as_posix()  # convert to posix
 
         # replace / (used for directory hierarchy in posix path) with . and remove . prefix (if exists)
-        package_import_path: PackagePath = package_posix_path.replace("/", ".").lstrip(".")
+        package_path: PackagePath = package_posix_path.replace("/", ".").lstrip(".")
 
         # remove prefix path containing `_INSTALLED_PACKAGES_DIRECTORY` directory
         # (for example, useful for virtual environments)
-        package_import_path = package_import_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
-        return package_import_path
+        package_path: PackagePath = package_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
+        return package_path
 
     def _load_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> List[Type[T]]:
         """Load all plugins located in ``packages_paths`` that satisfy the ``plugins_predicate``"""
