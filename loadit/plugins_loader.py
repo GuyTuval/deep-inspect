@@ -135,7 +135,7 @@ class PluginsLoader(BaseModel):
 
     def load_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
         """Load all plugins in ``self.plugins_packages`` that are subclasses of ``ancestor_class``"""
-        return self._load(lambda member: _is_member_subclass_of_ancestor_predicate(member, ancestor_class))
+        return self._load(lambda member: _is_member_subclass_of_ancestor(member, ancestor_class))
 
     def load(self) -> List[Type[T]]:
         """Load all plugins in ``self.plugins_packages`` that satisfy ``plugins_predicate``"""
@@ -301,7 +301,7 @@ class PluginsLoader(BaseModel):
         logger.warning(warning_message)
 
 
-def _is_member_subclass_of_ancestor_predicate(member: Any, ancestor_class: Type[T]) -> bool:
+def _is_member_subclass_of_ancestor(member: Any, ancestor_class: Type[T]) -> bool:
     return (
             inspect.isclass(member) and
             member != ancestor_class and
