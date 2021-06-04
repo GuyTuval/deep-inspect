@@ -174,7 +174,7 @@ class PluginsLoader(BaseModel):
 
     def _generate_package_relative_path(self, package: ModuleType) -> FileSystemPath:
         """Generates a ``FileSystemPath`` of ``package``'s  relative to ``current_working_directory``"""
-        package_path = package.__path__[0]
+        package_path: FileSystemPath = package.__path__[0]
         return self._generate_directory_relative_path(package_path)
 
     def _generate_packages_paths_from_files(self,
@@ -231,7 +231,7 @@ class PluginsLoader(BaseModel):
 
     # TODO: Can go out to path_utils
     @staticmethod
-    def _generate_directory_relative_path(directory: Union[Path, FileSystemPath]) -> FileSystemPath:
+    def _generate_directory_relative_path(directory: FileSystemPath) -> FileSystemPath:
         """Generates a ``FileSystemPath`` of ``directory`` relative to ``current_working_directory``"""
         current_working_directory = Path.cwd()
         package_relative_path = os.path.relpath(directory, current_working_directory)
