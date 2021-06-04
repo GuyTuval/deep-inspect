@@ -22,12 +22,102 @@ _PRIVATE_PREFIX: Final = "__"
 _INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
 
 
+def load_subclasses(
+        ancestor_class: Type[T],
+        plugins_packages: Union[ModuleType, Set[ModuleType]],
+        *,
+        raise_exception_on_missing_modules: bool = False,
+        included_files_pattern: Pattern[str] = re.compile(r".*"),
+        included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
+        included_subpackages: Optional[Set[ModuleType]] = None) -> List[Type[T]]:
+    """
+    Load all subclasses (direct and indirect + dynamically created at import time) of `ancestor_class`
+    :param ancestor_class: The ancestor of the subclasses
+    :param plugins_packages: A package or a list of packages to look for the subclasses
+    :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
+    or not
+    :param included_files_pattern: A regex of the acceptable module files names
+    :param included_subdirectories_pattern: A regex of the acceptable package subdirectories names
+    :param included_subpackages: Whether to look the subclasses all the way down the package or only in the highest
+    hierarchy
+    :return: A list of all subclasses of the ancestor
+    """
+
+    plugins_loader = _create_plugins_loader(
+        plugins_packages,
+        raise_exception_on_missing_modules,
+        included_files_pattern,
+        included_subdirectories_pattern,
+        included_subpackages
+    )
+    return plugins_loader.load_subclasses(ancestor_class)
+
+
+def load(plugins_packages: Union[ModuleType, Set[ModuleType]],
+         plugins_predicate: Callable[..., bool],
+         *,
+         raise_exception_on_missing_modules: bool = False,
+         included_files_pattern: Pattern[str] = re.compile(r".*"),
+         included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
+         included_subpackages: Set[ModuleType] = None) -> List[Type[T]]:
+    """
+    Load all plugins that satisfy the `plugins_predicate`
+    :param plugins_packages: A package or a list of packages to look for the subclasses
+    :param plugins_predicate: A function that decides whether a plugin satisfies our requirements or not
+    :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
+    or not
+    :param included_files_pattern: A regex of the acceptable module files names
+    :param included_subdirectories_pattern: A regex of the acceptable package subdirectories names
+    :param included_subpackages: Whether to look the subclasses all the way down the package or only in the highest
+    hierarchy
+    :return: A list of all subclasses of the ancestor
+    """
+
+    plugins_loader = _create_plugins_loader(
+        plugins_packages,
+        raise_exception_on_missing_modules,
+        included_files_pattern,
+        included_subdirectories_pattern,
+        included_subpackages,
+        plugins_predicate
+    )
+    return plugins_loader.load()
+
+
+def _create_plugins_loader(plugins_packages: Union[ModuleType, Set[ModuleType]],
+                           raise_exception_on_missing_modules: bool = False,
+                           included_files_pattern: Pattern[str] = re.compile(r".*"),
+                           included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
+                           included_subpackages: Optional[Set[ModuleType]] = None,
+                           plugins_predicate: Callable[..., bool] = lambda member: False):
+    """
+    Creates a `PluginsLoader`
+    :param plugins_packages: A package or a list of packages to look for the subclasses
+    :param plugins_predicate: A function that decides whether a plugin satisfies our requirements or not
+    :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
+    or not
+    :param included_files_pattern: A regex of the acceptable module files names
+    :param included_subdirectories_pattern: A regex of the acceptable package subdirectories names
+    :param included_subpackages: Whether to look the subclasses all the way down the package or only in the highest
+    hierarchy
+    :return: The Created `PluginsLoader` instance
+    """
+    if not included_subpackages:
+        included_subpackages = set()
+    plugins_loader = PluginsLoader(
+        plugins_packages=plugins_packages,
+        raise_exception_on_missing_modules=raise_exception_on_missing_modules,
+        included_files_pattern=included_files_pattern,
+        included_subdirectories_pattern=included_subdirectories_pattern,
+        included_subpackages=included_subpackages,
+        plugins_predicate=plugins_predicate
+    )
+    return plugins_loader
+
+
 class PluginsLoader(BaseModel):
     """
     A class used for loading plugins dynamically.
-
-    :param plugins_packages A single package or a ``Set`` of packages that will be used to search for plugins in
-
     """
 
     class Config:
