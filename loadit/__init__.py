@@ -1,5 +1,3 @@
-from loadit.plugins_loader import PluginsLoader
+from loadit.plugins_loader import *
 
-__version__ = "0.1"
-__all__ = ['PluginsLoader']
-
+__version__ = '0.1.0'
