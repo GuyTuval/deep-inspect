@@ -11,8 +11,8 @@ from typing import (Any, Callable, Final, Iterator, List, Pattern,
 
 from pydantic import BaseModel
 
-__all__ = ["PluginsLoader"]
-_logger = logging.getLogger(__name__)
+__all__ = ["load_subclasses", "load"]
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 FileSystemPath = Union[str, Path]
@@ -298,7 +298,7 @@ class PluginsLoader(BaseModel):
         )
         if self.raise_exception_on_missing_modules:
             raise ModuleNotFoundError(warning_message)
-        _logger.warning(warning_message)
+        logger.warning(warning_message)
 
 
 def _is_member_subclass_of_ancestor_predicate(member: Any, ancestor_class: Type[T]) -> bool:
