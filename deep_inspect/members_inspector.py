@@ -193,43 +193,6 @@ class MembersInspector(BaseModel):
                 and re.match(self.included_files_pattern, package_file) is not None
         )
 
-    def _generate_subdirectories_trees(self, package_directory: FileSystemPath,
-                                       package_subdirectories: List[FileSystemPath]) -> \
-            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
-
-        subdirectories_trees: Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]
-        subdirectories_trees = chain.from_iterable([])
-        package_subdirectories_full_paths = [
-            Path(package_directory) / directory for directory in package_subdirectories
-            if self._is_acceptable_package_subdirectory(directory)
-        ]
-        for package_subdirectory_full_path in package_subdirectories_full_paths:
-            subdirectory_tree = self._generate_subdirectory_tree(package_subdirectory_full_path)
-            subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
-        return subdirectories_trees
-
-    def _generate_subdirectory_tree(self, package_subdirectory_full_path: Path) -> \
-            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
-
-        package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
-        subdirectory_tree = os.walk(package_subdirectory_relative_path)
-        return subdirectory_tree
-
-    def _is_acceptable_package_subdirectory(self, package_subdirectory: FileSystemPath) -> bool:
-        """Checks if ``package_subdirectory`` is one which we want to look at"""
-        return (
-                not package_subdirectory.startswith(_PRIVATE_PREFIX)
-                and re.match(self.included_subdirectories_pattern, package_subdirectory) is not None
-        )
-
-    # TODO: Can go out to path_utils
-    @staticmethod
-    def _generate_directory_relative_path(directory: FileSystemPath) -> FileSystemPath:
-        """Generates a ``FileSystemPath`` of ``directory`` relative to ``current_working_directory``"""
-        current_working_directory = Path.cwd()
-        package_relative_path = os.path.relpath(directory, current_working_directory)
-        return package_relative_path
-
     @staticmethod
     def _generate_package_path(package_file_relative_path: Path) -> PackagePath:
         """
@@ -249,6 +212,43 @@ class MembersInspector(BaseModel):
         # (for example, useful for virtual environments)
         package_path: PackagePath = package_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
         return package_path
+
+    def _generate_subdirectories_trees(self, package_directory: FileSystemPath,
+                                       package_subdirectories: List[FileSystemPath]) -> \
+            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
+
+        subdirectories_trees: Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]
+        subdirectories_trees = chain.from_iterable([])
+        package_subdirectories_full_paths = [
+            Path(package_directory) / directory for directory in package_subdirectories
+            if self._is_acceptable_package_subdirectory(directory)
+        ]
+        for package_subdirectory_full_path in package_subdirectories_full_paths:
+            subdirectory_tree = self._generate_subdirectory_tree(package_subdirectory_full_path)
+            subdirectories_trees = chain(subdirectories_trees, subdirectory_tree)
+        return subdirectories_trees
+
+    def _is_acceptable_package_subdirectory(self, package_subdirectory: FileSystemPath) -> bool:
+        """Checks if ``package_subdirectory`` is one which we want to look at"""
+        return (
+                not package_subdirectory.startswith(_PRIVATE_PREFIX)
+                and re.match(self.included_subdirectories_pattern, package_subdirectory) is not None
+        )
+
+    def _generate_subdirectory_tree(self, package_subdirectory_full_path: Path) -> \
+            Iterator[Tuple[FileSystemPath, List[FileSystemPath], List[FileSystemPath]]]:
+
+        package_subdirectory_relative_path = self._generate_directory_relative_path(package_subdirectory_full_path)
+        subdirectory_tree = os.walk(package_subdirectory_relative_path)
+        return subdirectory_tree
+
+    # TODO: Can go out to path_utils
+    @staticmethod
+    def _generate_directory_relative_path(directory: FileSystemPath) -> FileSystemPath:
+        """Generates a ``FileSystemPath`` of ``directory`` relative to ``current_working_directory``"""
+        current_working_directory = Path.cwd()
+        package_relative_path = os.path.relpath(directory, current_working_directory)
+        return package_relative_path
 
     def _load_members(self, packages_paths: Set[PackagePath], members_predicate: Callable[..., bool]) -> List[Type[T]]:
         """Load all members located in ``packages_paths`` that satisfy the ``members_predicate``"""
