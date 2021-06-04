@@ -6,7 +6,7 @@ import re
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import (Any, Callable, Final, Iterator, List, Optional, Pattern,
+from typing import (Any, Callable, Final, Iterator, List, Pattern,
                     Set, Tuple, Type, TypeVar, Union)
 
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ _INSTALLED_PACKAGES_DIRECTORY: Final = "site-packages"
 
 def get_subclasses(
         ancestor_class: Type[T],
-        plugins_packages: Union[ModuleType, Set[ModuleType]],
+        members_packages: Union[ModuleType, Set[ModuleType]],
         *,
         raise_exception_on_missing_modules: bool = False,
         full_depth_search: bool = True,
@@ -33,7 +33,7 @@ def get_subclasses(
     """
     Load all subclasses (direct and indirect + dynamically created at import time) of `ancestor_class`
     :param ancestor_class: The ancestor of the subclasses
-    :param plugins_packages: A package or a list of packages to look for the subclasses
+    :param members_packages: A package or a list of packages to look the subclasses at
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
     or not
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
@@ -42,27 +42,27 @@ def get_subclasses(
     :return: A list of all subclasses of the ancestor
     """
 
-    plugins_loader = _create_plugins_loader(
-        plugins_packages=plugins_packages,
+    members_inspector = _create_members_inspector(
+        members_packages=members_packages,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
         included_subdirectories_pattern=included_subdirectories_pattern
     )
-    return plugins_loader.load_subclasses(ancestor_class)
+    return members_inspector.get_subclasses(ancestor_class)
 
 
-def get_members(plugins_packages: Union[ModuleType, Set[ModuleType]],
-                plugins_predicate: Callable[..., bool],
+def get_members(members_packages: Union[ModuleType, Set[ModuleType]],
+                members_predicate: Callable[..., bool],
                 *,
                 raise_exception_on_missing_modules: bool = False,
                 full_depth_search: bool = True,
                 included_files_pattern: Pattern[str] = re.compile(r".*"),
                 included_subdirectories_pattern: Pattern[str] = re.compile(r".*")) -> List[Type[T]]:
     """
-    Load all plugins that satisfy the `plugins_predicate`
-    :param plugins_packages: A package or a list of packages to look for the subclasses
-    :param plugins_predicate: A function that decides whether a plugin satisfies our requirements or not
+    Load all members that satisfy the `members_predicate`
+    :param members_packages: A package or a list of packages the members at
+    :param members_predicate: A function that decides whether a member satisfies our requirements or not
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
     or not
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
@@ -71,83 +71,83 @@ def get_members(plugins_packages: Union[ModuleType, Set[ModuleType]],
     :return: A list of all subclasses of the ancestor
     """
 
-    plugins_loader = _create_plugins_loader(
-        plugins_packages=plugins_packages,
+    members_inspector = _create_members_inspector(
+        members_packages=members_packages,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
         included_subdirectories_pattern=included_subdirectories_pattern,
-        plugins_predicate=plugins_predicate
+        members_predicate=members_predicate
     )
-    return plugins_loader.load()
+    return members_inspector.get_members()
 
 
-def _create_plugins_loader(*, plugins_packages: Union[ModuleType, Set[ModuleType]],
-                           raise_exception_on_missing_modules: bool = False,
-                           full_depth_search: bool = True,
-                           included_files_pattern: Pattern[str] = re.compile(r".*"),
-                           included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
-                           plugins_predicate: Callable[..., bool] = lambda member: False):
+def _create_members_inspector(*, members_packages: Union[ModuleType, Set[ModuleType]],
+                              raise_exception_on_missing_modules: bool = False,
+                              full_depth_search: bool = True,
+                              included_files_pattern: Pattern[str] = re.compile(r".*"),
+                              included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
+                              members_predicate: Callable[..., bool] = lambda member: False):
     """
     Creates a `PluginsLoader`
-    :param plugins_packages: A package or a list of packages to look for the subclasses
+    :param members_packages: A package or a list of packages to look the members at
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
     or not
     :param included_files_pattern: A regex of the acceptable module files names
     :param included_subdirectories_pattern: A regex of the acceptable package subdirectories names
-    :param plugins_predicate: A function that decides whether a plugin satisfies our requirements or not
+    :param members_predicate: A function that decides whether a member satisfies our requirements or not
     :return: The Created `PluginsLoader` instance
     """
-    plugins_loader = PluginsLoader(
-        plugins_packages=plugins_packages,
+    members_inspector = MembersInspector(
+        members_packages=members_packages,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
         included_subdirectories_pattern=included_subdirectories_pattern,
-        plugins_predicate=plugins_predicate
+        members_predicate=members_predicate
     )
-    return plugins_loader
+    return members_inspector
 
 
-class PluginsLoader(BaseModel):
+class MembersInspector(BaseModel):
     """
-    A class used for loading plugins dynamically.
+    A class used for loading members dynamically.
     """
 
     class Config:
         arbitrary_types_allowed = True
 
-    plugins_packages: Union[ModuleType, Set[ModuleType]]
+    members_packages: Union[ModuleType, Set[ModuleType]]
     raise_exception_on_missing_modules: bool = False
     full_depth_search: bool = True
     included_files_pattern: Pattern[str] = re.compile(r".*")
     included_subdirectories_pattern: Pattern[str] = re.compile(r".*")
-    plugins_predicate: Callable[..., bool] = lambda member: False
+    members_predicate: Callable[..., bool] = lambda member: False
 
-    def load_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
-        """Load all plugins in ``self.plugins_packages`` that are subclasses of ``ancestor_class``"""
-        return self._load(lambda member: _is_member_subclass_of_ancestor(member, ancestor_class))
+    def get_subclasses(self, ancestor_class: Type[T]) -> List[Type[T]]:
+        """Get all subclasses in ``self.members_packages`` that are subclasses of ``ancestor_class``"""
+        return self._get_members(lambda member: _is_member_subclass_of_ancestor(member, ancestor_class))
 
-    def load(self) -> List[Type[T]]:
-        """Load all plugins in ``self.plugins_packages`` that satisfy ``plugins_predicate``"""
-        return self._load(self.plugins_predicate)
+    def get_members(self) -> List[Type[T]]:
+        """Get all members in ``self.members_packages`` that satisfy ``members_predicate``"""
+        return self._get_members(self.members_predicate)
 
-    def _load(self, plugins_predicate: Callable[..., bool]) -> List[Type[T]]:
-        """Load all plugins in ``self.plugins_packages`` that satisfy ``plugins_predicate``"""
+    def _get_members(self, members_predicate: Callable[..., bool]) -> List[Type[T]]:
+        """Get all members in ``self.members_packages`` that satisfy ``members_predicate``"""
         packages_paths: Set[PackagePath] = set()
-        plugins_packages = self.plugins_packages if isinstance(self.plugins_packages, set) else {self.plugins_packages}
-        for plugins_package in plugins_packages:
-            packages_paths |= self._generate_packages_paths_from_module(plugins_package)
+        members_packages = self.members_packages if isinstance(self.members_packages, set) else {self.members_packages}
+        for members_package in members_packages:
+            packages_paths |= self._generate_packages_paths_from_module(members_package)
 
-        plugins: List[Type[T]] = self._load_plugins(packages_paths, plugins_predicate)
-        return plugins
+        members: List[Type[T]] = self._load_members(packages_paths, members_predicate)
+        return members
 
     def _generate_packages_paths_from_module(self, package: ModuleType) -> Set[PackagePath]:
         """
         Generates ``PackagePath``-s of all packages in ``package``.
-        For example, if ``package`` is 'plugins' the returned list will look something like
-        ['plugins.plugin1', 'plugins.plugin2']
+        For example, if ``package`` is 'my_package' the returned list will look something like
+        ['my_package.first_file', 'my_package.second_file']
         """
         packages_paths: Set[PackagePath] = set()
         excluded_prefixes = (_PRIVATE_PREFIX, ".")  # exclude inner directories
@@ -250,30 +250,30 @@ class PluginsLoader(BaseModel):
         package_path: PackagePath = package_path.split(f"{_INSTALLED_PACKAGES_DIRECTORY}.")[-1]
         return package_path
 
-    def _load_plugins(self, packages_paths: Set[PackagePath], plugins_predicate: Callable[..., bool]) -> List[Type[T]]:
-        """Load all plugins located in ``packages_paths`` that satisfy the ``plugins_predicate``"""
-        plugins: List[Type[T]] = []  # define the list of plugins
+    def _load_members(self, packages_paths: Set[PackagePath], members_predicate: Callable[..., bool]) -> List[Type[T]]:
+        """Load all members located in ``packages_paths`` that satisfy the ``members_predicate``"""
+        members: List[Type[T]] = []  # define the list of members
         missing_modules: List[str] = []
 
-        for plugin_file_name in packages_paths:  # import each plugin's module
+        for package_path in packages_paths:
             try:
-                plugin_module = importlib.import_module(plugin_file_name)
+                module = importlib.import_module(package_path)
             except ModuleNotFoundError as e:
                 if not e.name:
                     raise e
                 if e.name not in missing_modules:
                     missing_modules.append(e.name)
                 continue
-            members = inspect.getmembers(plugin_module, plugins_predicate)
-            plugin: Type[T]
-            for _, plugin in members:
-                if plugin not in plugins:  # use this condition instead of set because T isn't necessarily hashable
-                    plugins.append(plugin)
+            module_members = inspect.getmembers(module, members_predicate)
+            member: Type[T]
+            for _, member in module_members:
+                if member not in members:  # use this condition instead of set because T isn't necessarily hashable
+                    members.append(member)
 
         if missing_modules:
             self._handle_missing_modules(missing_modules)
 
-        return plugins
+        return members
 
     def _handle_missing_modules(self, missing_modules: List[str]) -> None:
         """
@@ -285,7 +285,7 @@ class PluginsLoader(BaseModel):
         """
         missing_modules_separated_by_comma = ", ".join(missing_modules)
         warning_message = (
-            f"WARNING: Failed searching plugins in the following imported modules: "
+            f"WARNING: Failed searching members in the following imported modules: "
             f"{missing_modules_separated_by_comma}.{os.linesep}"
             f"Consider running the following command: 'pip3 install {missing_modules_separated_by_comma}'."
         )
