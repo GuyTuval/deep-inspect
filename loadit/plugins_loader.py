@@ -6,7 +6,7 @@ import re
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import (Any, Callable, Final, Iterator, List, Pattern,
+from typing import (Any, Callable, Final, Iterator, List, Optional, Pattern,
                     Set, Tuple, Type, TypeVar, Union)
 
 from pydantic import BaseModel
