@@ -155,7 +155,7 @@ class MembersInspector(BaseModel):
         package_relative_path = self._generate_package_relative_path(package)
         directory_tree = os.walk(package_relative_path)
         for package_directory, package_subdirectories, package_files in directory_tree:
-            if Path(package_directory).name.endswith(excluded_prefixes):
+            if Path(package_directory).name.startswith(excluded_prefixes):
                 continue
             packages_paths |= self._generate_packages_paths_from_files(package_directory, package_files)
 
