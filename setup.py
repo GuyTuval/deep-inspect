@@ -20,8 +20,8 @@ def get_long_description(path: str) -> str:
 
 
 setuptools.setup(
-    name="loadit",
-    version=get_version('loadit/__init__.py'),
+    name="deep-inspect",
+    version=get_version('deep_inspect/__init__.py'),
     author="Guy Tuval",
     author_email="guytuval@gmail.com",
     description="A library for dynamically loading plugins",
