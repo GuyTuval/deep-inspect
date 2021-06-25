@@ -58,7 +58,7 @@ if __name__ == '__main__':
 ```
 
 ### Factory example
-Originally, Deep Inspect goal was to implement `get_subclasses()` functions to help register `class`es
+Originally, Deep Inspect goal was to implement `get_subclasses()` function to help register `class`es
 to a Factory in a dynamic matter.
 
 Refer to the following code sample:
