@@ -105,7 +105,8 @@ Contribution
 
 As Deep Inspect started as a helper library for my current job (refer to the `Factory` example), 
 it hasn't reached its full potential.
-You are more than welcome to create PRs and I will review them in my free time.
+
+You are more than welcome to create PRs and I will review them on my free time.
 
 Links
 -----
