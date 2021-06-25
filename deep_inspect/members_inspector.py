@@ -26,6 +26,7 @@ def get_subclasses(
         ancestor_class: Type[T],
         members_packages: Union[ModuleType, Set[ModuleType]],
         *,
+        debug: bool = False,
         raise_exception_on_missing_modules: bool = False,
         full_depth_search: bool = True,
         included_files_pattern: Pattern[str] = re.compile(r".*"),
@@ -34,6 +35,7 @@ def get_subclasses(
     Load all subclasses (direct and indirect + dynamically created at import time) of `ancestor_class`
     :param ancestor_class: The ancestor of the subclasses
     :param members_packages: A package or a list of packages to look the subclasses at
+    :param debug: Whether debug mode is on or off - affects logging of deep_inspect
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
     or not
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
@@ -44,6 +46,7 @@ def get_subclasses(
 
     members_inspector = _create_members_inspector(
         members_packages=members_packages,
+        debug=debug,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
@@ -55,6 +58,7 @@ def get_subclasses(
 def get_members(members_packages: Union[ModuleType, Set[ModuleType]],
                 members_predicate: Callable[..., bool],
                 *,
+                debug: bool = False,
                 raise_exception_on_missing_modules: bool = False,
                 full_depth_search: bool = True,
                 included_files_pattern: Pattern[str] = re.compile(r".*"),
@@ -63,6 +67,7 @@ def get_members(members_packages: Union[ModuleType, Set[ModuleType]],
     Load all members that satisfy the `members_predicate`
     :param members_packages: A package or a list of packages the members at
     :param members_predicate: A function that decides whether a member satisfies our requirements or not
+    :param debug: Whether debug mode is on or off - affects logging of deep_inspect
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
     or not
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
@@ -73,6 +78,7 @@ def get_members(members_packages: Union[ModuleType, Set[ModuleType]],
 
     members_inspector = _create_members_inspector(
         members_packages=members_packages,
+        debug=debug,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
@@ -83,6 +89,7 @@ def get_members(members_packages: Union[ModuleType, Set[ModuleType]],
 
 
 def _create_members_inspector(*, members_packages: Union[ModuleType, Set[ModuleType]],
+                              debug: bool = False,
                               raise_exception_on_missing_modules: bool = False,
                               full_depth_search: bool = True,
                               included_files_pattern: Pattern[str] = re.compile(r".*"),
@@ -101,6 +108,7 @@ def _create_members_inspector(*, members_packages: Union[ModuleType, Set[ModuleT
     """
     members_inspector = MembersInspector(
         members_packages=members_packages,
+        debug=debug,
         raise_exception_on_missing_modules=raise_exception_on_missing_modules,
         full_depth_search=full_depth_search,
         included_files_pattern=included_files_pattern,
@@ -119,6 +127,7 @@ class MembersInspector(BaseModel):
         arbitrary_types_allowed = True
 
     members_packages: Union[ModuleType, Set[ModuleType]]
+    debug: bool = False
     raise_exception_on_missing_modules: bool = False
     full_depth_search: bool = True
     included_files_pattern: Pattern[str] = re.compile(r".*")
@@ -291,7 +300,9 @@ class MembersInspector(BaseModel):
         )
         if self.raise_exception_on_missing_modules:
             raise ModuleNotFoundError(warning_message)
-        logger.warning(warning_message)
+
+        if self.debug:
+            logger.warning(warning_message)
 
 
 def _is_member_subclass_of_ancestor(member: Any, ancestor_class: Type[T]) -> bool:
