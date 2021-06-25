@@ -24,4 +24,4 @@ jobs:
 
       - name: Lint
         run: |
-          isort loadit tests --check-only --verbose
+          isort deep_inspect tests --check-only --verbose
