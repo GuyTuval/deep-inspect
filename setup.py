@@ -41,10 +41,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
     ],
-    url="https://github.com/GuyTuval/loadit",
+    url="https://github.com/GuyTuval/deep-inspect",
     project_urls={
-        "Source": "https://github.com/GuyTuval/loadit",
-        "Bug Tracker": "https://github.com/GuyTuval/loadit/issues",
+        "Source": "https://github.com/GuyTuval/deep-inspect",
+        "Bug Tracker": "https://github.com/GuyTuval/deep-inspect/issues",
     },
     install_requires=[
         "pydantic >= 1.7.1",
