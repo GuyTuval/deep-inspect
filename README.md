@@ -5,7 +5,7 @@ Deep Inspect is a library that wraps `inspect` built-in module. It's purpose
 is to allow you to explore python packages in a 'deeper' manner -
 down to the most inner files in the package's hierarchy.
 
-Currently, Deep Inspect offers `get_subclasses()` and `get_members` in a 'deeper' manner.
+Currently, Deep Inspect offers `get_subclasses()` and `get_members()` in a 'deeper' manner.
 
 
 Installation
