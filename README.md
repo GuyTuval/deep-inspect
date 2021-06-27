@@ -1,5 +1,8 @@
 Deep Inspect
 ============
+[![PyPI](https://img.shields.io/pypi/v/deep-inspect)](https://pypi.org/project/deep-inspect/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/deep-inspect)](https://pypi.org/project/deep-inspect/)
+[![PyPI License](https://img.shields.io/pypi/l/deep-inspect)](https://pypi.org/project/deep-inspect/)
 
 Deep Inspect is a library that wraps `inspect` built-in module. It's purpose
 is to allow you to explore python packages in a 'deeper' manner -
