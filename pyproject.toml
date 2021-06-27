@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "deep-inspect"
-version = "0.1.0"
-description = "A library for dynamically loading plugins"
+version = "0.1.1"
+description = "A wrapper for inspect for deeper exploration - all down the directory tree"
 authors = ["GuyTuval <guytuval@gmail.com>"]
-license="GNU GPLv3"
-readme="README.md"
-classifiers=[
+license = "GNU GPLv3"
+readme = "README.md"
+classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Intended Audience :: Developers",
     "Topic :: Utilities",
     "Typing :: Typed",
@@ -21,17 +21,15 @@ classifiers=[
     "Programming Language :: Python :: 3.9",
     "Operating System :: OS Independent",
 ]
-homepage="https://github.com/GuyTuval/loadit"
-
+homepage = "https://github.com/GuyTuval/deep-inspect"
 
 [tool.poetry.urls]
-"Source" = "https://github.com/GuyTuval/loadit"
-"Bug Tracker" = "https://github.com/GuyTuval/loadit/issues",
-
+"Source" = "https://github.com/GuyTuval/deep-inspect"
+"Bug Tracker" = "https://github.com/GuyTuval/deep-inspect/issues"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-pydantic = {version = "^1.7.1", python = "^3.6"}
+pydantic = "^1.7.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
