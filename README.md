@@ -8,7 +8,7 @@ Deep Inspect is a library that wraps `inspect` built-in module. It's purpose
 is to allow you to explore python packages in a 'deeper' manner -
 down to the most inner files in the package's hierarchy.
 
-Currently, Deep Inspect offers `get_subclasses()` and `get_members` in a 'deeper' manner.
+Currently, Deep Inspect offers `get_subclasses()` and `get_members()` in a 'deeper' manner.
 
 
 Installation
@@ -61,8 +61,8 @@ if __name__ == '__main__':
 ```
 
 ### Factory example
-Originally, Deep Inspect goal was to implement `get_subclasses()` functions to help register `class`es
-to a Factory in a dynamic matter.
+Originally, Deep Inspect goal was to implement `get_subclasses()` function to help register `class`es
+to a Factory in a dynamic manner.
 
 Refer to the following code sample:
 ```python
@@ -108,7 +108,8 @@ Contribution
 
 As Deep Inspect started as a helper library for my current job (refer to the `Factory` example), 
 it hasn't reached its full potential.
-You are more than welcome to create PRs and I will review them in my free time.
+
+You are more than welcome to create PRs and I will review them on my free time.
 
 Links
 -----
