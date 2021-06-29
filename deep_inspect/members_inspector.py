@@ -96,7 +96,7 @@ def _create_members_inspector(*, members_packages: Union[ModuleType, Set[ModuleT
                               included_subdirectories_pattern: Pattern[str] = re.compile(r".*"),
                               members_predicate: Callable[..., bool] = lambda member: False):
     """
-    Creates a `PluginsLoader`
+    Creates a `MembersInspector`
     :param members_packages: A package or a list of packages to look the members at
     :param full_depth_search: Whether to go deeper in search of the members or just search in the packages depth
     :param raise_exception_on_missing_modules: Whether to raise exception in case of missing module in the used package
@@ -104,7 +104,7 @@ def _create_members_inspector(*, members_packages: Union[ModuleType, Set[ModuleT
     :param included_files_pattern: A regex of the acceptable module files names
     :param included_subdirectories_pattern: A regex of the acceptable package subdirectories names
     :param members_predicate: A function that decides whether a member satisfies our requirements or not
-    :return: The Created `PluginsLoader` instance
+    :return: The Created `MembersInspector` instance
     """
     members_inspector = MembersInspector(
         members_packages=members_packages,

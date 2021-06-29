@@ -4,7 +4,7 @@ version = "0.1.1"
 description = "A wrapper for inspect for deeper exploration - all down the directory tree"
 authors = ["GuyTuval <guytuval@gmail.com>"]
 license = "GNU GPLv3"
-readme = "README.rst"
+readme = "README.md"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: GNU GPLv3",
